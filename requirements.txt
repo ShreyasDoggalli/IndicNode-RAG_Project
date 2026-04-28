@@ -1,0 +1,28 @@
+# Core dependencies
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+rank-bm25>=0.2.2
+PyPDF2>=3.0.0
+
+# LLM clients
+openai>=1.0.0
+requests>=2.31.0
+
+# Text processing
+langchain-text-splitters>=0.0.1
+tiktoken>=0.5.0
+nltk>=3.8.0
+
+# Cross-encoder for re-ranking
+transformers>=4.35.0
+torch>=2.0.0
+
+# Metrics & visualization
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0

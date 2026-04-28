@@ -1,0 +1,128 @@
+# Information Retrieval and RAG Systems
+
+## What is Information Retrieval (IR)?
+
+Information Retrieval is the science of searching for information in a collection of documents. It's the technology behind search engines like Google, library catalogs, and enterprise search systems.
+
+### Key IR Concepts
+
+**Documents and Queries**: IR systems match user queries against a corpus (collection) of documents to find the most relevant ones.
+
+**Relevance**: A document is relevant if it helps answer the user's information need. Relevance can be exact (the document directly answers the question) or partial (the document provides useful context).
+
+## Vector Search
+
+### Embeddings
+An embedding is a dense numerical vector that represents the semantic meaning of text. Modern embedding models (like sentence-transformers) convert text into fixed-size vectors (e.g., 384 dimensions) such that semantically similar texts have similar vectors.
+
+**How embeddings capture meaning:**
+- The model is trained on millions of text pairs
+- During training, similar texts are pushed closer in vector space
+- The result: a geometric space where distance represents semantic similarity
+
+### Cosine Similarity
+The standard metric for comparing embedding vectors. It measures the angle between two vectors:
+- cos(θ) = 1.0: Vectors point in the same direction (identical meaning)
+- cos(θ) = 0.0: Vectors are perpendicular (unrelated)
+- cos(θ) = -1.0: Vectors point in opposite directions
+
+When vectors are normalized (unit length), cosine similarity equals the dot product, making it very fast to compute.
+
+### FAISS (Facebook AI Similarity Search)
+FAISS is an open-source library by Meta for efficient similarity search of dense vectors. It can search through billions of vectors in milliseconds using special index structures.
+
+**Index types:**
+- **IndexFlatIP**: Exact search using inner product. Guarantees finding the true nearest neighbors. Best for small-medium datasets (<1M vectors).
+- **IndexIVFFlat**: Approximate search using clustering. Partitions vectors into Voronoi cells and only searches nearby cells. Much faster but may miss some true neighbors.
+- **IndexHNSW**: Graph-based search using Hierarchical Navigable Small World graphs. Very fast and accurate, good for large-scale applications.
+- **IndexPQ**: Product Quantization for memory-efficient storage. Compresses vectors while maintaining search quality.
+
+**ANN (Approximate Nearest Neighbor)**: Finding vectors that are "close enough" to the query rather than guaranteed closest. The accuracy-speed tradeoff is configurable.
+
+## Keyword Search
+
+### BM25 (Best Matching 25)
+The most popular keyword-based ranking function, used by search engines since the 1990s.
+
+**BM25 scoring formula considers:**
+- **Term Frequency (TF)**: How often the query term appears in a document. More occurrences → higher score, but with diminishing returns (saturation).
+- **Inverse Document Frequency (IDF)**: How rare the term is across all documents. Rare terms (like "quantum") are more informative than common terms (like "the").
+- **Document Length Normalization**: Longer documents naturally contain more words, so scores are normalized to avoid length bias.
+
+**When BM25 excels:**
+- Exact keyword matching ("FAISS", "BM25", specific names)
+- Technical terminology
+- Acronyms and abbreviations
+- Named entities
+
+**When BM25 struggles:**
+- Semantic similarity ("ML" vs "machine learning")
+- Paraphrases ("happy" vs "joyful")
+- Context-dependent meaning
+
+### Hybrid Retrieval
+Combining vector search (semantic) with keyword search (lexical) for better results. The intuition: they have complementary strengths.
+
+**Score fusion methods:**
+- **Weighted Sum**: combined = α × vector_score + (1-α) × bm25_score
+- **Reciprocal Rank Fusion (RRF)**: Combines rankings rather than raw scores
+- **Linear Combination**: Normalize both scores to [0,1] then add
+
+Research consistently shows hybrid retrieval outperforms either method alone.
+
+## Re-ranking
+
+### Two-Stage Retrieval
+1. **Stage 1 (Recall)**: Fast retrieval of top-N candidates using bi-encoder
+2. **Stage 2 (Precision)**: Slow but accurate re-ranking of candidates using cross-encoder
+
+### Bi-Encoder vs Cross-Encoder
+- **Bi-Encoder**: Encodes query and document SEPARATELY, then compares with dot product. Fast because document encodings can be pre-computed. Used for initial retrieval.
+- **Cross-Encoder**: Encodes query and document TOGETHER as a single input. Much more accurate because it can model interactions between query and document. Used for re-ranking.
+
+### Why Re-rank?
+Initial retrieval uses bi-encoders which are fast but less precise. Re-ranking with a cross-encoder gives a "second opinion" that significantly improves result quality, especially for the top results that the user actually sees.
+
+## RAG (Retrieval-Augmented Generation)
+
+RAG combines the strengths of retrieval systems with generative AI (LLMs) to produce accurate, grounded answers.
+
+### The RAG Pipeline
+1. **Ingest**: Load documents → chunk → embed → store in vector index
+2. **Retrieve**: Given a query → search for relevant chunks
+3. **Augment**: Combine retrieved chunks with the query into a prompt
+4. **Generate**: Send the augmented prompt to an LLM for answer generation
+
+### Why RAG?
+- **Reduces hallucination**: LLM answers are grounded in real documents
+- **Up-to-date knowledge**: No need to retrain the LLM for new information
+- **Source attribution**: Can cite which documents the answer came from
+- **Domain-specific**: Works with your own proprietary documents
+- **Cost-effective**: Cheaper than fine-tuning an LLM
+
+### RAG vs Fine-tuning
+- **RAG**: External knowledge retrieval at inference time. Quick to update, no training needed. Best when knowledge changes frequently.
+- **Fine-tuning**: Internal knowledge baked into model weights. Requires training data and compute. Best for teaching the model a specific style or behavior.
+
+### Challenges in RAG
+- **Chunk size**: Too small → lose context. Too large → dilute relevance.
+- **Retrieval quality**: If wrong chunks are retrieved, the LLM generates wrong answers.
+- **Context window limits**: LLMs can only process limited context.
+- **Latency**: Retrieval + generation adds latency compared to direct LLM calls.
+- **Cost**: Embedding and LLM API calls can be expensive at scale.
+
+## Adaptive RAG
+
+An advanced approach where the RAG system adjusts its behavior based on the query and system performance.
+
+### What Makes It Adaptive?
+- **Query-level optimization**: Different queries get different retrieval strategies
+- **Runtime parameter tuning**: top-K, retrieval method, and re-ranking are adjusted per query
+- **Feedback-driven improvement**: System learns from its own performance metrics
+- **Latency-aware**: Reduces processing when the system is under load
+
+### Example Adaptations
+- Short factual query → retrieve 3 chunks, vector-only, no re-ranking
+- Complex comparison query → retrieve 10 chunks, hybrid search, with re-ranking
+- System running slow → reduce retrieval depth to meet latency budget
+- Quality trending down → increase retrieval depth and enable re-ranking

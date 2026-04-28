@@ -1,0 +1,92 @@
+# Introduction to Machine Learning
+
+## What is Machine Learning?
+
+Machine Learning (ML) is a subset of Artificial Intelligence (AI) that focuses on building systems that learn from data. Instead of being explicitly programmed with rules, ML systems identify patterns in data and use those patterns to make predictions or decisions.
+
+The key idea is: instead of writing code that specifies how to solve a problem, you provide the computer with data and let it figure out the solution on its own!
+
+## Types of Machine Learning
+
+### Supervised Learning
+In supervised learning, the model is trained on labeled data — each training example has an input and a known correct output. The model learns to map inputs to outputs.
+
+**Examples:**
+- **Classification**: Is this email spam or not spam? (Categorical output)
+- **Regression**: What will the house price be? (Continuous output)
+
+**Common algorithms:**
+- Linear Regression — fits a straight line to data
+- Logistic Regression — predicts probabilities for classification
+- Decision Trees — creates a tree of yes/no questions
+- Random Forests — ensemble of many decision trees
+- Support Vector Machines (SVM) — finds optimal separation boundary
+- Neural Networks — layers of interconnected nodes (perceptrons)
+
+### Unsupervised Learning
+In unsupervised learning, the model works with unlabeled data — it finds hidden patterns and structures without being told what to look for.
+
+**Examples:**
+- **Clustering**: Group similar customers together (K-Means, DBSCAN)
+- **Dimensionality Reduction**: Compress 100 features to 10 (PCA, t-SNE)
+- **Anomaly Detection**: Find unusual transactions (Isolation Forest)
+
+### Reinforcement Learning
+The model learns by interacting with an environment, receiving rewards for good actions and penalties for bad ones. Think of it like training a dog — reward good behavior, discourage bad behavior.
+
+**Examples:**
+- Game playing (AlphaGo, chess engines)
+- Robotics (learning to walk, grasp objects)
+- Autonomous driving
+
+## Key Concepts
+
+### Features and Labels
+- **Features**: The input variables (columns) used to make predictions. For house prices: square footage, number of bedrooms, location.
+- **Labels**: The output variable (target) we're trying to predict. For house prices: the actual price.
+
+### Training and Testing
+- **Training Set**: Data used to teach the model (typically 70-80%)
+- **Test Set**: Data held back to evaluate the model (typically 20-30%)
+- **Validation Set**: Data used during training to tune hyperparameters
+
+### Overfitting and Underfitting
+- **Overfitting**: The model memorizes training data but fails on new data. Like a student who memorizes answers but can't solve new problems.
+- **Underfitting**: The model is too simple to capture the patterns. Like trying to draw a curve with a straight line.
+- **Regularization**: Techniques to prevent overfitting (L1/L2 regularization, dropout)
+
+### Model Evaluation Metrics
+- **Accuracy**: Percentage of correct predictions
+- **Precision**: Of all positive predictions, how many were actually positive?
+- **Recall**: Of all actual positives, how many did we correctly identify?
+- **F1 Score**: Harmonic mean of precision and recall
+- **MSE/RMSE**: Mean Squared Error for regression tasks
+
+## The ML Pipeline
+
+1. **Data Collection**: Gather relevant data
+2. **Data Preprocessing**: Clean, normalize, handle missing values
+3. **Feature Engineering**: Create meaningful features from raw data
+4. **Model Selection**: Choose the right algorithm
+5. **Training**: Fit the model to training data
+6. **Evaluation**: Test on held-out data
+7. **Deployment**: Put the model into production
+8. **Monitoring**: Track performance over time
+
+## Gradient Descent
+
+Gradient descent is the optimization algorithm used to train most ML models. It works by:
+1. Start with random model parameters
+2. Calculate the error (loss) on training data
+3. Compute the gradient (direction of steepest ascent)
+4. Update parameters in the opposite direction (descent)
+5. Repeat until convergence
+
+**Learning Rate**: How big each step is. Too large → overshoot. Too small → too slow.
+
+## Bias-Variance Tradeoff
+
+Every ML model faces a tradeoff:
+- **High Bias**: Model is too simple → underfits → consistent but wrong
+- **High Variance**: Model is too complex → overfits → inconsistent
+- **Sweet spot**: Balance between bias and variance → best generalization

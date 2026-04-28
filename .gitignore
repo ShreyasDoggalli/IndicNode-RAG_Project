@@ -1,0 +1,37 @@
+# Environment
+.env
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Data (keep sample, ignore large files)
+data/vector_store/
+data/bm25_store/
+*.faiss
+*.pkl
+
+# Metrics output
+metrics_output/
+*.png
+
+# Logs
+*.log
+
+# Assignment PDF
+Assignment*.pdf

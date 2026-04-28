@@ -1,0 +1,137 @@
+# Deep Learning and Neural Networks
+
+## What is Deep Learning?
+
+Deep Learning is a subset of Machine Learning that uses neural networks with many layers (hence "deep") to model complex patterns in data. While traditional ML requires manual feature engineering, deep learning automatically discovers the representations (features) needed for prediction.
+
+## Neural Network Architecture
+
+### The Perceptron (Single Neuron)
+The basic building block. It takes multiple inputs, multiplies each by a weight, sums them up, adds a bias, and passes through an activation function:
+
+output = activation(w1*x1 + w2*x2 + ... + wn*xn + bias)
+
+### Layers
+- **Input Layer**: Receives the raw data
+- **Hidden Layers**: Process data through weighted connections
+- **Output Layer**: Produces the final prediction
+
+### Activation Functions
+- **ReLU** (Rectified Linear Unit): max(0, x) — most popular for hidden layers
+- **Sigmoid**: 1/(1+e^(-x)) — outputs between 0 and 1
+- **Tanh**: (e^x - e^(-x))/(e^x + e^(-x)) — outputs between -1 and 1
+- **Softmax**: Converts outputs to probability distribution (for multi-class)
+
+## Types of Neural Networks
+
+### Feedforward Neural Networks (FNN)
+The simplest type. Data flows in one direction: input → hidden → output. Good for tabular data and basic classification.
+
+### Convolutional Neural Networks (CNN)
+Designed for image data. Uses special "convolution" operations that scan small patches of the image to detect features like edges, textures, and objects.
+
+**Key components:**
+- **Convolutional Layer**: Applies filters/kernels to detect features
+- **Pooling Layer**: Reduces spatial dimensions (max pooling, avg pooling)
+- **Flatten + Dense**: Converts feature maps to classification output
+
+**Why CNNs are better than fully connected networks for images:**
+- Parameter sharing: The same filter is applied across the entire image
+- Translation invariance: Can detect a cat regardless of its position
+- Hierarchical features: Early layers detect edges → later layers detect objects
+
+### Recurrent Neural Networks (RNN)
+Designed for sequential data (text, time series). Has "memory" that carries information from previous steps.
+
+**Variants:**
+- **LSTM** (Long Short-Term Memory): Solves the vanishing gradient problem
+- **GRU** (Gated Recurrent Unit): Simplified LSTM, often equally effective
+
+### Transformers
+The architecture behind modern NLP breakthroughs (GPT, BERT, etc.).
+
+**Key innovation: Self-Attention Mechanism**
+Instead of processing sequentially (like RNNs), transformers look at ALL words in a sentence simultaneously and learn which words are most important for understanding each other word.
+
+**Components:**
+- **Multi-Head Attention**: Multiple attention patterns in parallel
+- **Positional Encoding**: Since transformers don't process sequentially, position must be encoded
+- **Feed-Forward Layers**: Process each position independently
+- **Layer Normalization**: Stabilizes training
+
+**Why transformers won:**
+- Parallelizable (unlike RNNs which must process sequentially)
+- Better at long-range dependencies
+- Scale efficiently with more data and compute
+
+## Training Deep Learning Models
+
+### Backpropagation
+The algorithm that trains neural networks. It works by:
+1. Forward pass: Input → predict output
+2. Compute loss (error between prediction and true value)
+3. Backward pass: Compute gradients of loss with respect to each weight
+4. Update weights using gradient descent
+
+### Common Loss Functions
+- **Cross-Entropy Loss**: For classification tasks
+- **MSE (Mean Squared Error)**: For regression tasks
+- **Binary Cross-Entropy**: For binary classification
+
+### Optimizers
+- **SGD** (Stochastic Gradient Descent): Basic, but effective
+- **Adam**: Adaptive learning rates, most popular default choice
+- **AdaGrad**: Adapts learning rate per parameter
+- **RMSprop**: Running average of squared gradients
+
+### Regularization Techniques
+- **Dropout**: Randomly disable neurons during training
+- **Batch Normalization**: Normalize layer inputs
+- **Early Stopping**: Stop training when validation loss increases
+- **Data Augmentation**: Create modified copies of training data
+
+## Transfer Learning
+
+Instead of training from scratch, start with a model pre-trained on a large dataset (like ImageNet for images or Wikipedia for text) and fine-tune it on your specific task.
+
+**Benefits:**
+- Requires much less data
+- Trains much faster
+- Often achieves better results
+
+**Example flow:**
+1. Take a pre-trained BERT model (trained on billions of words)
+2. Add a classification layer on top
+3. Fine-tune on your specific dataset (e.g., sentiment analysis)
+4. The pre-trained knowledge transfers to your task
+
+## Large Language Models (LLMs)
+
+LLMs are very large transformer models trained on massive text datasets. They can understand and generate human language.
+
+**Key characteristics:**
+- Billions of parameters (GPT-4: ~1.8 trillion estimated)
+- Trained on trillions of tokens from the internet
+- Can perform many tasks without task-specific training (zero-shot)
+- Emergent abilities appear at scale (reasoning, coding, math)
+
+**Examples:**
+- GPT-4 (OpenAI)
+- Llama 3 (Meta)
+- Claude (Anthropic)
+- Gemini (Google)
+
+### How LLMs Generate Text
+LLMs are fundamentally "next token predictors." Given a sequence of tokens, they predict the probability distribution of the next token.
+
+Process:
+1. Tokenize input text into tokens
+2. Feed tokens through transformer layers
+3. Output a probability for each possible next token
+4. Sample from this distribution (temperature controls randomness)
+5. Append the selected token and repeat
+
+### Temperature in LLM Generation
+- **Temperature 0.0**: Always pick the most probable token → deterministic, focused
+- **Temperature 0.7**: Balanced creativity
+- **Temperature 1.0+**: More random, creative, but potentially incoherent
