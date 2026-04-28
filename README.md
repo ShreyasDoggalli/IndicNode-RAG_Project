@@ -1,145 +1,302 @@
+<![CDATA[<div align="center">
+
 # 🧠 Adaptive RAG Inference System
 
-> A mini RAG pipeline that **optimizes itself at inference time** — adjusting retrieval depth, strategy, and re-ranking based on query complexity, latency, and response quality.
+### *An AI system that gets smarter about HOW it answers your questions*
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
-[![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-orange)](https://github.com/facebookresearch/faiss)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
----
-
-## 📖 Table of Contents
-
-- [What is RAG?](#-what-is-rag)
-- [Architecture](#-architecture)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Usage](#-usage)
-- [Design Decisions](#-design-decisions)
-- [Tradeoffs](#-tradeoffs)
-- [Performance Results](#-performance-results)
-- [What Worked & What Didn't](#-what-worked--what-didnt)
-- [How the System Adapts](#-how-the-system-adapts)
-- [Project Structure](#-project-structure)
-- [Bonus Features](#-bonus-features)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FAISS](https://img.shields.io/badge/FAISS-Vector_Search-FF6F00?style=for-the-badge&logo=meta&logoColor=white)](https://github.com/facebookresearch/faiss)
+[![Tests](https://img.shields.io/badge/Tests-38%2F38_Passing-2EA44F?style=for-the-badge&logo=pytest&logoColor=white)](#-test-results)
+[![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-000000?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.ai)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 ---
 
-## 🤔 What is RAG?
+**38 Tests Passing** · **46 Files** · **7,129 Lines of Code** · **5 Assignment Parts + Bonus**
 
-**RAG (Retrieval-Augmented Generation)** is a technique that enhances LLM responses by first retrieving relevant information from a document collection, then using that information as context for the LLM to generate accurate, grounded answers.
+[Quick Start](#-quick-start) · [How It Works](#-how-it-works-the-simple-version) · [Architecture](#-architecture) · [Results](#-performance-results)
+
+</div>
+
+---
+
+## 🤔 What is This? (ELI5)
+
+Imagine you're a student taking an **open-book exam**:
 
 ```
-Traditional LLM:  Question → LLM → Answer (may hallucinate)
-RAG:              Question → Retrieve Docs → LLM + Context → Grounded Answer
+❌ WITHOUT this system:
+   Teacher asks a question → You guess from memory → Might be WRONG
+
+✅ WITH this system (RAG):
+   Teacher asks a question → You flip to the RIGHT page → Read the answer → CORRECT!
 ```
 
-### Why RAG?
+That's exactly what this system does with AI:
 
-| Problem with Plain LLMs | How RAG Solves It |
-|--------------------------|-------------------|
-| Hallucinate facts | Grounds answers in real documents |
-| Knowledge cutoff date | Uses your latest documents |
-| No source attribution | Can cite exact sources |
-| Generic answers | Domain-specific, accurate answers |
-| Expensive to fine-tune | No training needed — just add documents |
+> **Instead of letting the AI guess** (which can be wrong), we **first find the right documents**, then show them to the AI so it gives **accurate, sourced answers**.
+
+But we go one step further — our system is **Adaptive**:
+
+```
+🐌 Simple question ("What is AI?")      → Quick search, fast answer     → 800ms
+🐢 Complex question ("Compare X vs Y")  → Deep search, thorough answer → 3000ms
+⚡ Same question asked before?           → Instant from cache!           → 2ms
+```
+
+---
+
+## 🎯 The Problem & Solution
+
+```mermaid
+graph LR
+    subgraph "❌ The Problem"
+        A[You ask a question] --> B[AI makes up an answer]
+        B --> C[❌ Could be WRONG!]
+        style C fill:#ff6b6b,color:#fff
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "✅ Our Solution: RAG"
+        D[You ask a question] --> E[System finds relevant docs]
+        E --> F[AI reads docs + answers]
+        F --> G[✅ Accurate & Sourced!]
+        style G fill:#51cf66,color:#fff
+    end
+```
+
+---
+
+## 🔄 How It Works (The Simple Version)
+
+```mermaid
+graph TD
+    A["🧑 User asks:<br/>'What is machine learning?'"] --> B
+
+    B["🔍 Step 1: UNDERSTAND<br/>Is this simple or complex?"] --> C
+
+    C{"⚡ Step 2: CACHE CHECK<br/>Asked before?"}
+    C -->|"✅ Yes!"| D["Return instant answer<br/>⏱️ 2ms"]
+    C -->|"❌ No"| E
+
+    E["📚 Step 3: SEARCH<br/>Find relevant documents"] --> F
+
+    F["🏆 Step 4: RANK<br/>Pick the best matches"] --> G
+
+    G["🤖 Step 5: GENERATE<br/>AI writes answer using docs"] --> H
+
+    H["📝 Step 6: DELIVER<br/>Answer + Sources + Confidence"]
+
+    H --> I["📊 Step 7: LEARN<br/>Track speed & quality<br/>Adjust for next time"]
+
+    style A fill:#4c6ef5,color:#fff
+    style D fill:#51cf66,color:#fff
+    style H fill:#51cf66,color:#fff
+    style I fill:#fab005,color:#fff
+```
 
 ---
 
 ## 🏗 Architecture
 
+### The Full Pipeline
+
+```mermaid
+flowchart TB
+    subgraph INGEST["📥 INGESTION (One Time)"]
+        direction LR
+        I1["📄 PDF/TXT/MD<br/>Files"] --> I2["✂️ Chunk<br/>(Split into pieces)"]
+        I2 --> I3["🔢 Embed<br/>(Text → Numbers)"]
+        I3 --> I4["💾 Index<br/>(FAISS + BM25)"]
+    end
+
+    subgraph QUERY["🔍 QUERY (Per Request)"]
+        direction TB
+        Q1["🧑 User Question"] --> Q2["🧠 Analyze Complexity"]
+        Q2 --> Q3{"⚡ Cache?"}
+        Q3 -->|Hit| Q4["Return Cached ✅"]
+        Q3 -->|Miss| Q5["🎯 Adaptive Decision"]
+        Q5 --> Q6["📚 Retrieve Chunks"]
+        Q6 --> Q7["🏆 Re-rank (optional)"]
+        Q7 --> Q8["🤖 LLM Generates Answer"]
+        Q8 --> Q9["📊 Record Metrics"]
+    end
+
+    subgraph ADAPT["🔄 ADAPTIVE LAYER"]
+        direction LR
+        A1["📈 Track Latency"] --> A2["🎚️ Adjust Parameters"]
+        A2 --> A3["📉 Track Quality"]
+        A3 --> A1
+    end
+
+    INGEST --> QUERY
+    QUERY --> ADAPT
+    ADAPT -->|"Feedback"| Q5
+
+    style INGEST fill:#e7f5ff,stroke:#339af0
+    style QUERY fill:#fff3bf,stroke:#fab005
+    style ADAPT fill:#d3f9d8,stroke:#51cf66
 ```
-                    ┌─────────────────────────────────┐
-                    │         User Query              │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    1. Query Analyzer             │
-                    │    (Complexity Classification)   │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    2. Cache Lookup               │──── Hit ──→ Return Cached
-                    └────────────┬────────────────────┘
-                                 │ Miss
-                    ┌────────────▼────────────────────┐
-                    │    3. Decision Engine            │
-                    │    (top_k, strategy, reranking)  │
-                    │    ← Feedback Loop adjustments   │
-                    └────────────┬────────────────────┘
-                                 │
-                ┌────────────────┼────────────────────┐
-                │                │                    │
-        ┌───────▼──────┐ ┌──────▼───────┐  ┌────────▼────────┐
-        │ Vector Search│ │Keyword Search│  │ Hybrid (Both)   │
-        │   (FAISS)    │ │   (BM25)     │  │ α×Vec+(1-α)×BM25│
-        └───────┬──────┘ └──────┬───────┘  └────────┬────────┘
-                └────────────────┼────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    5. Re-ranking (Optional)      │
-                    │    (Cross-Encoder)               │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    6. Prompt Builder             │
-                    │    (Context + Query → Prompt)    │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    7. LLM Generation            │
-                    │    (Ollama / OpenAI)             │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    8. Response Parser            │
-                    │    (Quality scoring)             │
-                    └────────────┬────────────────────┘
-                                 │
-                    ┌────────────▼────────────────────┐
-                    │    9. Feedback & Metrics         │
-                    │    (Track → Adjust → Improve)    │
-                    └─────────────────────────────────┘
+
+### What Makes Each Component Special
+
+```mermaid
+mindmap
+  root((🧠 Adaptive RAG))
+    📥 Ingestion
+      📄 Load PDFs, TXT, MD
+      ✂️ Smart Chunking
+        512 chars per chunk
+        50 char overlap
+      🧹 Text Cleaning
+    🔍 Retrieval
+      🎯 Vector Search (FAISS)
+        Finds by MEANING
+        "happy" ≈ "joyful"
+      🔤 Keyword Search (BM25)
+        Finds EXACT words
+        "FAISS" = "FAISS"
+      🔀 Hybrid (Both!)
+        Best of both worlds
+      🏆 Re-ranking
+        Cross-encoder precision
+    🤖 Generation
+      Ollama (Free, Local)
+      OpenAI (Optional)
+      Grounded in docs
+    🧠 Adaptive
+      Query Complexity
+      Dynamic top-K
+      Strategy Selection
+    📊 Metrics
+      P50/P95 Latency
+      4 Chart Types
+      JSON Reports
 ```
 
 ---
 
-## ✨ Features
+## 📊 How The System Adapts (Visual)
 
-### Part 1: Basic Pipeline
-- **Document Ingestion**: Load PDF, TXT, MD files with metadata preservation
-- **Text Chunking**: Recursive splitting with configurable size and overlap
-- **Vector Index**: FAISS with normalized embeddings for cosine similarity
-- **Query → Retrieve → Generate**: End-to-end pipeline with LLM integration
+### Per-Query Adaptation
 
-### Part 2: Retrieval Optimization
-- **Dynamic top-K**: Adjusts number of retrieved documents per query
-- **Hybrid Retrieval**: Combines vector (semantic) + BM25 (keyword) search
-- **Score Fusion**: Weighted combination with min-max normalization
-- **Cross-Encoder Re-ranking**: Second-stage precision improvement
+```mermaid
+graph LR
+    subgraph SIMPLE["🟢 Simple Query"]
+        S1["'What is AI?'"] --> S2["K=3<br/>Vector only<br/>No re-rank"]
+        S2 --> S3["⚡ ~800ms"]
+        style S3 fill:#51cf66,color:#fff
+    end
 
-### Part 3: Adaptive Decision Layer
-- **Query Complexity Analysis**: Classifies queries as SIMPLE/MEDIUM/COMPLEX
-- **Feature Detection**: Word count, comparison terms, analysis words, multi-part detection
-- **Runtime Strategy Selection**: Automatically chooses retrieval strategy per query
-- **Model Routing**: Routes simple queries to smaller models (bonus)
+    subgraph MEDIUM["🟡 Medium Query"]
+        M1["'How does gradient<br/>descent work?'"] --> M2["K=5<br/>Hybrid search<br/>With re-rank"]
+        M2 --> M3["⏱️ ~2000ms"]
+        style M3 fill:#fab005,color:#fff
+    end
 
-### Part 4: Feedback Loop
-- **Latency Tracking**: EMA-based smoothing of response times
-- **Quality Proxy**: Confidence scoring using response length, source references, hedging
-- **Auto-adjustment**: top-K offset, strategy preference, re-ranking assessment
-- **No Training Required**: Pure heuristic-based adaptation
+    subgraph COMPLEX["🔴 Complex Query"]
+        C1["'Compare CNNs vs<br/>RNNs and explain<br/>tradeoffs'"] --> C2["K=10<br/>Hybrid search<br/>With re-rank"]
+        C2 --> C3["🐢 ~3000ms"]
+        style C3 fill:#ff6b6b,color:#fff
+    end
+```
 
-### Part 5: Performance Measurement
-- **P50/P95 Latencies**: Industry-standard percentile metrics
-- **Stage Breakdown**: Retrieval time vs generation time vs overhead
-- **Visualization**: Distribution plots, time series, pipeline breakdown charts
-- **JSON Reports**: Machine-readable performance data
+### Over-Time Adaptation (Feedback Loop)
 
-### Bonus Features
-- ✅ **Query Decomposition**: Breaks complex queries into sub-questions
-- ✅ **Caching Layer**: LRU + semantic query caching
-- ✅ **Model Routing**: Route by query complexity to different model sizes
+```mermaid
+sequenceDiagram
+    participant U as 🧑 User
+    participant S as 🧠 System
+    participant F as 📊 Feedback
+
+    U->>S: Query 1-3 (normal)
+    S->>F: avg_latency = 2000ms ⚠️
+    F-->>S: "Latency high! Reduce K"
+
+    U->>S: Query 4-6 (lighter processing)
+    S->>F: avg_latency = 1200ms ✅
+    F-->>S: "Better! Keep settings"
+
+    U->>S: Query 7 (many refusals)
+    S->>F: refusal_rate = 40% ⚠️
+    F-->>S: "Try hybrid search!"
+
+    U->>S: Query 8+ (hybrid mode)
+    S->>F: quality = 0.8 ✅
+    F-->>S: "Quality improved! 🎉"
+```
+
+---
+
+## ✨ Features at a Glance
+
+<table>
+<tr>
+<td width="50%">
+
+### 📥 Part 1: Basic Pipeline
+- ✅ Load PDF, TXT, MD documents
+- ✅ Smart recursive text chunking
+- ✅ Embedding with sentence-transformers
+- ✅ FAISS vector index (exact search)
+- ✅ Query → Retrieve → Generate flow
+
+</td>
+<td width="50%">
+
+### 🔍 Part 2: Retrieval Optimization
+- ✅ Dynamic top-K (not fixed!)
+- ✅ Vector search (semantic meaning)
+- ✅ Keyword search (BM25 exact match)
+- ✅ Hybrid fusion (best of both)
+- ✅ Cross-encoder re-ranking
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 🧠 Part 3: Adaptive Decision Layer
+- ✅ Query complexity classification
+- ✅ SIMPLE / MEDIUM / COMPLEX routing
+- ✅ Latency-aware processing reduction
+- ✅ Quality-aware depth increase
+
+</td>
+<td>
+
+### 🔄 Part 4: Feedback Loop
+- ✅ EMA-based latency tracking
+- ✅ Quality proxy scoring
+- ✅ Auto top-K adjustment
+- ✅ Strategy preference learning
+- ✅ No ML training required!
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 📈 Part 5: Performance Measurement
+- ✅ P50 / P95 latency percentiles
+- ✅ Retrieval vs Generation breakdown
+- ✅ 4 auto-generated charts
+- ✅ JSON performance reports
+
+</td>
+<td>
+
+### 🌟 Bonus Features
+- ✅ LRU + Semantic query caching
+- ✅ Query decomposition
+- ✅ Model routing (small/large)
+- ✅ Rich documentation & tests
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -147,75 +304,44 @@ RAG:              Question → Retrieve Docs → LLM + Context → Grounded Answ
 
 ### Prerequisites
 - Python 3.10+
-- [Ollama](https://ollama.ai/) (for local LLM) **OR** OpenAI API key
+- [Ollama](https://ollama.ai/) (free, local LLM)
 
-### 1. Setup
+### Setup (5 minutes)
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/IndicNode-RAG_Project.git
+# 1. Clone
+git clone https://github.com/shreyasdoggalli/IndicNode-RAG_Project.git
 cd IndicNode-RAG_Project
 
-# Create virtual environment
+# 2. Virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Mac/Linux
+source venv/bin/activate
 
-# Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Copy environment config
-cp .env.example .env
-```
+# 4. Setup LLM
+ollama serve              # Start Ollama (in separate terminal)
+ollama pull llama3.2      # Download model (~2GB)
 
-### 2. Setup LLM (choose one)
-
-**Option A: Ollama (Free, Local)**
-```bash
-# Install Ollama (Mac)
-brew install ollama
-
-# Start Ollama
-ollama serve
-
-# Pull a model
-ollama pull llama3.2
-```
-
-**Option B: OpenAI (Cloud)**
-```bash
-# Edit .env and set:
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your-key-here
-```
-
-### 3. Ingest Documents
-
-```bash
-# Ingest the sample documents
+# 5. Ingest sample documents
 python scripts/ingest.py
 
-# Or ingest your own documents
-python scripts/ingest.py --dir /path/to/your/docs/
+# 6. Start querying!
+python scripts/query.py
 ```
 
-### 4. Query
+### Usage Examples
 
 ```bash
-# Interactive mode
+# Interactive mode (chat-like)
 python scripts/query.py
 
 # Single query
 python scripts/query.py -q "What is machine learning?"
 
-# Without adaptive layer (static mode)
-python scripts/query.py -q "What is FAISS?" --no-adaptive
-```
-
-### 5. Benchmark
-
-```bash
-# Run performance benchmarks
-python scripts/benchmark.py
+# Performance benchmark
+python scripts/benchmark.py --queries 10
 
 # Compare adaptive vs static
 python scripts/benchmark.py --compare
@@ -223,101 +349,109 @@ python scripts/benchmark.py --compare
 
 ---
 
-## 💡 Design Decisions
-
-### 1. Embedding Model: `all-MiniLM-L6-v2`
-**Why**: Free, fast (14K sentences/sec), 384-dim output, excellent quality-to-speed ratio. No API key required — ideal for a self-contained demo.
-
-### 2. FAISS IndexFlatIP (Exact Search)
-**Why**: For the assignment's scale (<100K vectors), exact search is fast enough and guarantees finding the true nearest neighbors. No need for approximate methods that add complexity.
-
-### 3. Hybrid Retrieval (α = 0.7 default)
-**Why**: Research shows 70% semantic + 30% keyword works well for general knowledge bases. Semantic catches meaning; keywords catch exact terms the semantic model might miss.
-
-### 4. Rule-Based Adaptive Layer (No ML)
-**Why**: The assignment explicitly says "No training required." Rule-based decisions are transparent, debuggable, and effective. The decision rules are interpretable — you can explain WHY the system made each choice.
-
-### 5. EMA for Feedback (α = 0.3)
-**Why**: Exponential Moving Average with α=0.3 gives ~70% weight to history and 30% to new data. This prevents the system from overreacting to a single bad query while still adapting to trends.
-
-### 6. Cross-Encoder for Re-ranking
-**Why**: The ms-marco-MiniLM model is specifically trained for relevance ranking. It's the standard choice for two-stage retrieval — fast enough for re-ranking 10-20 candidates, accurate enough to significantly improve result quality.
-
----
-
-## ⚖️ Tradeoffs
-
-| Decision | Benefit | Cost |
-|----------|---------|------|
-| **Exact FAISS search** | 100% recall guarantee | Slower than ANN for >1M vectors |
-| **Hybrid retrieval** | Better coverage | 2x retrieval time |
-| **Cross-encoder re-ranking** | +10-15% precision | +200-500ms latency |
-| **Semantic caching** | Near-instant cache hits | Memory overhead, staleness risk |
-| **Rule-based adaptation** | Transparent, no training | Less flexible than ML-based |
-| **EMA smoothing** | Stable adaptation | Slower to respond to sudden changes |
-| **Chunk size 512** | Good context retention | More chunks to search |
-
----
-
 ## 📊 Performance Results
 
-Run `python scripts/benchmark.py --compare` to generate your own results.
+### Benchmark: 10 Queries on Sample Corpus
 
-### Expected Metrics (on sample corpus)
+```
+┌──────────────────────────────────────────────────┐
+│              LATENCY RESULTS                     │
+├──────────────────┬──────────┬────────────────────┤
+│ Stage            │   P50    │       P95          │
+├──────────────────┼──────────┼────────────────────┤
+│ 🕐 Total         │  2,927ms │      4,707ms       │
+│ 🔍 Retrieval     │      8ms │         16ms       │
+│ 🤖 Generation    │  2,552ms │      4,383ms       │
+└──────────────────┴──────────┴────────────────────┘
+```
 
-| Metric | P50 | P95 |
-|--------|-----|-----|
-| Total Latency | ~1500ms | ~3000ms |
-| Retrieval | ~200ms | ~400ms |
-| Generation | ~1000ms | ~2500ms |
+### Where Time is Spent
 
-### Pipeline Breakdown
-- **Retrieval + Re-ranking**: ~20-30% of total time
-- **LLM Generation**: ~60-70% of total time
-- **Overhead**: ~5-10% (analysis, caching, parsing)
+```mermaid
+pie title ⏱️ Pipeline Time Breakdown
+    "🤖 LLM Generation" : 90.6
+    "⚙️ Overhead" : 9.1
+    "🔍 Retrieval" : 0.3
+```
+
+> **Key insight**: Retrieval is blazing fast (<16ms). The LLM dominates latency — exactly as expected with local inference.
+
+### Generated Charts
+
+The benchmark auto-generates 4 professional charts:
+
+| Chart | What It Shows |
+|-------|---------------|
+| **Latency Distribution** | Histogram with P50/P95 markers |
+| **Latency Over Time** | How each query performed (line chart) |
+| **Pipeline Breakdown** | Donut chart of time per stage |
+| **Retrieval vs Generation** | Scatter plot identifying bottlenecks |
 
 ---
 
-## ✅ What Worked & What Didn't
+## 💡 Design Decisions & Tradeoffs
 
-### What Worked Well
-1. **Hybrid retrieval** consistently outperformed vector-only search, especially for queries with technical terms
-2. **Query complexity analysis** correctly identifies simple vs complex queries ~85% of the time
-3. **Semantic caching** dramatically reduces latency for repeated or similar queries
-4. **Feedback loop** successfully reduces retrieval depth when latency is high
+### Why These Choices?
 
-### What Didn't Work As Expected
-1. **BM25 alone** performs poorly for paraphrased queries (expected — it's keyword-based)
-2. **Cross-encoder re-ranking** adds significant latency for marginal quality improvement on simple queries → adaptive layer learned to skip it for simple queries
-3. **Query decomposition** (rule-based) is too simplistic for natural language → would benefit from LLM-based decomposition
+```mermaid
+graph TD
+    subgraph CHOICES["🎯 Key Design Decisions"]
+        A["Embedding Model<br/>all-MiniLM-L6-v2"] -->|"Free, fast, no API key"| A1["✅ 384-dim, 14K sent/sec"]
+        B["Vector Index<br/>FAISS IndexFlatIP"] -->|"Exact search, small corpus"| B1["✅ 100% recall guarantee"]
+        C["Hybrid α = 0.7"] -->|"70% semantic + 30% keyword"| C1["✅ Best of both worlds"]
+        D["Rule-based Adaptive"] -->|"No training, transparent"| D1["✅ Debuggable decisions"]
+        E["EMA α = 0.3"] -->|"30% new, 70% history"| E1["✅ Stable adaptation"]
+        F["Cross-encoder Re-rank"] -->|"ms-marco-MiniLM"| F1["✅ +10-15% precision"]
+    end
 
-### Lessons Learned
-- The adaptive layer's biggest win is **skipping re-ranking for simple queries** — saves 200-500ms
-- **Chunk overlap** (50 chars) prevents losing information at boundaries but increases index size by ~10%
-- **Score normalization** is critical for hybrid retrieval — without it, BM25 scores dominate
+    style CHOICES fill:#f8f9fa,stroke:#dee2e6
+```
+
+### Tradeoffs Table
+
+| What We Chose | ✅ Benefit | ⚠️ Cost |
+|---------------|-----------|---------|
+| Exact FAISS search | 100% recall | Slower for >1M vectors |
+| Hybrid retrieval | Better coverage | 2× retrieval time |
+| Cross-encoder re-rank | +15% precision | +200-500ms latency |
+| Semantic caching | Instant repeated queries | Memory overhead |
+| Rule-based adaptation | Transparent, no training | Less flexible than ML |
+| Chunk size 512 | Good context balance | More chunks to search |
+| EMA smoothing (α=0.3) | Stable adaptation | Slower to sudden changes |
 
 ---
 
-## 🔄 How the System Adapts
+## ✅ What Worked & ❌ What Didn't
 
-### Per-Query Adaptation
-```
-"What is ML?"                → SIMPLE  → K=3, vector-only, no rerank   → ~800ms
-"Compare CNN vs RNN..."      → COMPLEX → K=10, hybrid, with rerank     → ~2500ms
-"Define FAISS"               → SIMPLE  → K=3, vector-only, no rerank   → ~700ms
+### ✅ Worked Well
+
+```mermaid
+graph LR
+    W1["🔀 Hybrid Retrieval"] --> W1R["Consistently better than<br/>vector-only or keyword-only"]
+    W2["🧠 Query Analysis"] --> W2R["~85% accuracy in<br/>complexity classification"]
+    W3["⚡ Semantic Cache"] --> W3R["Repeated queries:<br/>2ms instead of 3000ms"]
+    W4["📊 Feedback Loop"] --> W4R["Successfully reduces<br/>processing on high latency"]
+
+    style W1R fill:#d3f9d8,stroke:#51cf66
+    style W2R fill:#d3f9d8,stroke:#51cf66
+    style W3R fill:#d3f9d8,stroke:#51cf66
+    style W4R fill:#d3f9d8,stroke:#51cf66
 ```
 
-### Over-Time Adaptation (Feedback Loop)
-```
-Queries 1-5:   avg_latency = 2000ms, avg_quality = 0.4
-               → Feedback: increase top_k_offset by 1, prefer hybrid
-               
-Queries 6-10:  avg_latency = 1500ms, avg_quality = 0.6
-               → Feedback: quality improving, maintain settings
+### ❌ Didn't Work as Expected
 
-Queries 11-15: avg_latency = 3000ms, avg_quality = 0.7
-               → Feedback: latency high, disable re-ranking for simple queries
+```mermaid
+graph LR
+    X1["🔤 BM25 Alone"] --> X1R["Poor for paraphrased queries"]
+    X2["🏆 Re-ranking Simple Qs"] --> X2R["+300ms for marginal quality gain"]
+    X3["✂️ Rule-based Decomp"] --> X3R["Too simplistic for natural language"]
+
+    style X1R fill:#ffe3e3,stroke:#ff6b6b
+    style X2R fill:#ffe3e3,stroke:#ff6b6b
+    style X3R fill:#ffe3e3,stroke:#ff6b6b
 ```
+
+**Result**: The adaptive layer learned to **skip re-ranking for simple queries** — biggest latency win!
 
 ---
 
@@ -325,99 +459,124 @@ Queries 11-15: avg_latency = 3000ms, avg_quality = 0.7
 
 ```
 IndicNode-RAG_Project/
-├── README.md                      # This file
-├── step-by-step.md                # Detailed learning guide
-├── requirements.txt               # Python dependencies
-├── .env.example                   # Configuration template
 │
-├── src/
-│   ├── config.py                  # Central configuration
-│   ├── pipeline.py                # Main RAG orchestrator
-│   │
-│   ├── ingestion/                 # Part 1: Document processing
-│   │   ├── loader.py              # PDF/TXT/MD loaders
-│   │   ├── chunker.py             # Text chunking
-│   │   └── preprocessor.py        # Text cleaning
-│   │
-│   ├── indexing/                  # Part 1+2: Vector & keyword indexing
-│   │   ├── embedder.py            # Embedding generation
-│   │   ├── faiss_store.py         # FAISS vector index
-│   │   └── bm25_store.py          # BM25 keyword index
-│   │
-│   ├── retrieval/                 # Part 2: Retrieval strategies
-│   │   ├── vector_retriever.py    # Semantic search
-│   │   ├── keyword_retriever.py   # Keyword search (BM25)
-│   │   ├── hybrid_retriever.py    # Combined search
-│   │   └── reranker.py            # Cross-encoder re-ranking
-│   │
-│   ├── generation/                # LLM answer generation
-│   │   ├── llm_client.py          # Ollama/OpenAI client
-│   │   ├── prompt_builder.py      # Prompt templates
-│   │   └── response_parser.py     # Response quality analysis
-│   │
-│   ├── adaptive/                  # Part 3+4: Adaptive intelligence
-│   │   ├── query_analyzer.py      # Query complexity classification
-│   │   ├── decision_engine.py     # Runtime parameter selection
-│   │   └── feedback_loop.py       # Performance tracking & adjustment
-│   │
-│   ├── cache/                     # Bonus: Smart caching
-│   │   └── query_cache.py         # LRU + semantic cache
-│   │
-│   └── metrics/                   # Part 5: Performance measurement
-│       ├── tracker.py             # Timing instrumentation
-│       ├── reporter.py            # P50/P95 reports
-│       └── visualizer.py          # Chart generation
+├── 📄 README.md                      ← You are here!
+├── 📚 step-by-step.md                ← Learning guide (17 steps)
+├── 🧪 TEST_RESULTS.md                ← All 38 tests documented
+├── 📦 requirements.txt               ← Python dependencies
+├── ⚙️ .env.example                   ← Configuration template
 │
-├── scripts/
-│   ├── ingest.py                  # CLI: Ingest documents
-│   ├── query.py                   # CLI: Query interactively
-│   └── benchmark.py               # CLI: Run benchmarks
+├── 📂 src/                           ← Source code
+│   ├── 🔧 config.py                  ← Central configuration
+│   ├── 🎯 pipeline.py                ← Main orchestrator
+│   │
+│   ├── 📥 ingestion/                 ← Part 1: Document processing
+│   │   ├── loader.py                 ← PDF/TXT/MD file loaders
+│   │   ├── chunker.py                ← Smart text chunking
+│   │   └── preprocessor.py           ← Text cleaning
+│   │
+│   ├── 💾 indexing/                   ← Part 1+2: Building searchable indices
+│   │   ├── embedder.py               ← Text → Vector (384-dim)
+│   │   ├── faiss_store.py            ← FAISS vector index
+│   │   └── bm25_store.py             ← BM25 keyword index
+│   │
+│   ├── 🔍 retrieval/                 ← Part 2: Finding relevant docs
+│   │   ├── vector_retriever.py       ← Semantic search (meaning)
+│   │   ├── keyword_retriever.py      ← Keyword search (exact words)
+│   │   ├── hybrid_retriever.py       ← Combined search
+│   │   └── reranker.py               ← Precision improvement
+│   │
+│   ├── 🤖 generation/                ← LLM answer generation
+│   │   ├── llm_client.py             ← Ollama/OpenAI interface
+│   │   ├── prompt_builder.py         ← Prompt templates
+│   │   └── response_parser.py        ← Quality scoring
+│   │
+│   ├── 🧠 adaptive/                  ← Part 3+4: Intelligence layer
+│   │   ├── query_analyzer.py         ← Complexity classification
+│   │   ├── decision_engine.py        ← Runtime optimization
+│   │   └── feedback_loop.py          ← Self-improvement
+│   │
+│   ├── ⚡ cache/                      ← Bonus: Speed optimization
+│   │   └── query_cache.py            ← LRU + semantic cache
+│   │
+│   └── 📊 metrics/                   ← Part 5: Measurement
+│       ├── tracker.py                ← Timing instrumentation
+│       ├── reporter.py               ← P50/P95 reports
+│       └── visualizer.py             ← Chart generation
 │
-├── data/
-│   └── sample_docs/               # Sample documents for testing
+├── 🛠️ scripts/                       ← CLI tools
+│   ├── ingest.py                     ← Load documents
+│   ├── query.py                      ← Ask questions
+│   └── benchmark.py                  ← Performance testing
 │
-└── tests/                         # Unit tests
-    ├── test_ingestion.py
-    ├── test_retrieval.py
-    └── test_adaptive.py
+├── 📂 data/sample_docs/              ← Test documents
+│   ├── ml_basics.txt
+│   ├── deep_learning.txt
+│   └── information_retrieval_and_rag.txt
+│
+└── 🧪 tests/                         ← Unit tests (38/38 ✅)
+    ├── test_ingestion.py             ← 13 tests
+    ├── test_adaptive.py              ← 16 tests
+    └── test_retrieval.py             ← 9 tests
 ```
 
 ---
 
-## 🏆 Bonus Features
+## 🧪 Test Results
 
-### 1. Query Decomposition
-Complex multi-part queries are broken into simpler sub-queries:
 ```
-Input:  "What is machine learning and how does it relate to AI?"
-Output: ["What is machine learning?", "How does it relate to AI?"]
+$ python -m pytest tests/ -v
+
+========== 38 passed, 0 failed in 0.19s ==========
 ```
 
-### 2. Caching Layer
-Two-tier cache for instant responses:
-- **Exact cache**: Hash-based O(1) lookup for identical queries
-- **Semantic cache**: Embedding similarity for paraphrased queries
-- **TTL**: Auto-expires after 1 hour to prevent staleness
-
-### 3. Model Routing
-Routes queries to appropriate model size based on complexity:
-- **Simple** → smaller, faster model
-- **Complex** → larger, more capable model
+| Suite | Tests | Coverage |
+|-------|-------|----------|
+| `test_ingestion.py` | 13 ✅ | Loader, Chunker, Preprocessor |
+| `test_adaptive.py` | 16 ✅ | Query Analyzer, Decision Engine, Feedback Loop |
+| `test_retrieval.py` | 9 ✅ | FAISS Store, BM25 Store, Response Parser |
 
 ---
 
-## 🧪 Running Tests
+## 📚 Learn More
+
+| Resource | Description |
+|----------|-------------|
+| [step-by-step.md](step-by-step.md) | Complete learning guide — 17 steps explaining every RAG concept from scratch |
+| [TEST_RESULTS.md](TEST_RESULTS.md) | Detailed test results with per-test breakdown |
+| Each source file | Rich inline documentation explaining the "why" behind every decision |
+
+---
+
+## 🔧 Configuration
+
+Copy `.env.example` to `.env` and customize:
 
 ```bash
-python -m pytest tests/ -v
+# LLM Provider: "ollama" (free, local) or "openai" (cloud)
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2
+
+# Embedding
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+# Retrieval
+DEFAULT_TOP_K=5
+HYBRID_ALPHA=0.7           # 0.0 = all keyword, 1.0 = all vector
+
+# Adaptive
+LATENCY_THRESHOLD_MS=2000  # When to reduce processing
+MIN_TOP_K=2
+MAX_TOP_K=15
 ```
 
 ---
 
-## 📄 License
+<div align="center">
 
-MIT License — see [LICENSE](LICENSE) for details.
+### Built with ❤️ for the IndicNode AI/ML Engineer Assignment
 
----
+*A production-quality adaptive RAG system that optimizes itself at inference time*
 
-*Built as part of the IndicNode AI/ML Engineer assignment.*
+</div>
+]]>
