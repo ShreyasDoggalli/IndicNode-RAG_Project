@@ -3,7 +3,6 @@
 An AI-powered question-answering system that **retrieves relevant documents first, then generates accurate answers** — and gets smarter about how it does this over time.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Tests](https://img.shields.io/badge/Tests-38%2F38_Passing-green)
 ![FAISS](https://img.shields.io/badge/FAISS-Vector_Search-orange)
 ![Ollama](https://img.shields.io/badge/LLM-Ollama-black)
 
